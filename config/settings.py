@@ -6,7 +6,6 @@ import datetime
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
@@ -17,7 +16,6 @@ SECRET_KEY = 's!th1nsocoe58h0yvkj-)4tk%p@%)%3i63s6&iyfa*yj+7oe8e'
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
 
 # Application definition
 DJANGO_APPS = [
@@ -39,6 +37,9 @@ THIRD_APPS = [
     'allauth.account',
     'django.contrib.sites',
     'rest_auth.registration',
+
+    # cors 문제 해결
+    'corsheaders',
 ]
 
 PROJECT_APPS = [
@@ -55,7 +56,7 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.MultiPartParser',
         'rest_framework.parsers.JSONParser',
     ],
-    'DEFAULT_AUTHENTICATION_CLASSES':[
+    'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
         # 'rest_framework.authentication.SessionAuthentication',
         # 'rest_framework.authentication.BasicAuthentication',
@@ -72,11 +73,10 @@ REST_AUTH_SERIALIZERS = {
 }
 
 # 회원가입용 SERIALIZER
-REST_AUTH_REGISTER_SERIALIZERS = { 'REGISTER_SERIALIZER': 'accounts.serializers.ProfileSerializer', }
+REST_AUTH_REGISTER_SERIALIZERS = {'REGISTER_SERIALIZER': 'accounts.serializers.ProfileSerializer', }
 
 # 마지막으로 회원가입용 SERIALIZER를 적용시켜주기 위한 단계
 ACCOUNT_ADAPTER = 'accounts.adapter.CustomAccountAdapter'
-
 
 # # 이메일 인증 관련 (메일 보내기!! 인증)
 # # 메일을 호스트하는 서버
@@ -153,7 +153,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
@@ -163,7 +162,6 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
@@ -183,7 +181,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/3.1/topics/i18n/
 
@@ -196,7 +193,6 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = False
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
@@ -213,3 +209,7 @@ STATIC_URL = '/static/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 MEDIA_URL = '/media/'
+
+CORS_ORIGIN_ALLOW_ALL = True
+
+CORS_ALLOW_CREDENTIALS = True
