@@ -1,11 +1,11 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
-
 from PIL import Image as Img
 from PIL import ExifTags
 from io import BytesIO
 from django.core.files import File
+
 
 class Profile(AbstractUser):
     # 추가적인 속성
