@@ -32,6 +32,7 @@ DJANGO_APPS = [
 THIRD_APPS = [
     # DRF
     'rest_framework',
+    # 'rest_framework.authtoken',
     # 회원 관련
     'allauth',
     'allauth.socialaccount',
@@ -62,47 +63,57 @@ REST_FRAMEWORK = {
 }
 
 # [DRF] 회원가입 시, 입력 요소 변경
-#유저 모델로 사용하기
+# 유저 모델로 사용하기
 AUTH_USER_MODEL = 'accounts.Profile'
 
-#response로 보넬 정보들이 적혀있는 Serializer
+# response로 보넬 정보들이 적혀있는 Serializer
 REST_AUTH_SERIALIZERS = {
     'USER_DETAILS_SERIALIZER': 'accounts.serializers.ProfileSerializer',
 }
 
-#회원가입용 SERIALIZER
+# 회원가입용 SERIALIZER
 REST_AUTH_REGISTER_SERIALIZERS = { 'REGISTER_SERIALIZER': 'accounts.serializers.ProfileSerializer', }
 
-#마지막으로 회원가입용 SERIALIZER를 적용시켜주기 위한 단계
+# 마지막으로 회원가입용 SERIALIZER를 적용시켜주기 위한 단계
 ACCOUNT_ADAPTER = 'accounts.adapter.CustomAccountAdapter'
 
 
-# 이메일 인증 관련 (메일 보내기!! 인증)
+# # 이메일 인증 관련 (메일 보내기!! 인증)
+# # 메일을 호스트하는 서버
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 # EMAIL_HOST = 'smtp.gmail.com'
-# # 메일을 호스트하는 서버
+
+# # gmail 통신하는 포트
 # EMAIL_PORT = '587'
-# # gmail과의 통신하는 포트
-# EMAIL_HOST_USER = '구글이메일@gmail.com'
+
 # # 발신할 이메일
-# EMAIL_HOST_PASSWORD = '추가적인비밀번호구하기'
+# EMAIL_HOST_USER = '구글이메일@gmail.com'
 # # 발신할 메일의 비밀번호
-# EMAIL_USE_TLS = True
+# EMAIL_HOST_PASSWORD = '추가적인비밀번호구하기'
+
 # # TLS 보안 방법
+# EMAIL_USE_TLS = True
+
 # DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 # URL_FRONT = 'http://dalgona.me/'
 # ACCOUNT_CONFIRM_EMAIL_ON_GET = True
+
 # # 이메일 필수 일 경우
 # ACCOUNT_EMAIL_REQUIRED = True
 # ACCOUNT_EMAIL_VERIFICATION = "mandatory"
-# 이메일 필수 아님
+
+# # 이메일 필수 아님
 ACCOUNT_EMAIL_REQUIRED = False
 ACCOUNT_EMAIL_VERIFICATION = "none"
-# EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = '/'
+
 # # 사이트와 관련한 자동응답을 받을 이메일 주소,'webmaster@localhost'
+# EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = '/'
 # ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 # ACCOUNT_EMAIL_CONFIRMATION_COOLDOWN = 5
 # ACCOUNT_EMAIL_SUBJECT_PREFIX = "이메일 제목"
+
+# JWT 사용
+REST_USE_JWT = True
 
 JWT_AUTH = {
     'JWT_SECRET_KEY': SECRET_KEY,
