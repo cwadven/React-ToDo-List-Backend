@@ -18,12 +18,14 @@ class ToDoListAPI(APIView):
 
     def post(self, request):
         if request.user.is_authenticated:
-            deadLine = request.data.get('deadLine', None)
+            deadLine = request.data.get('deadLine')
             text = request.data.get('text')
 
             # 한국 9시간 더하기
             if deadLine:
                 deadLine = (datetime.strptime(deadLine, '%Y-%m-%dT%H:%M:%S.%fZ') + timedelta(hours=9))
+            else:
+                deadLine = None
 
             todo = ToDo.objects.create(
                 author=request.user,
@@ -40,12 +42,14 @@ class ToDoListAPI(APIView):
 class ToDoDetailAPI(APIView):
     def put(self, request, id):
         if request.user.is_authenticated:
-            deadLine = request.data.get('deadLine', None)
+            deadLine = request.data.get('deadLine')
             text = request.data.get('text')
 
             # 한국 9시간 더하기
             if deadLine:
                 deadLine = (datetime.strptime(deadLine, '%Y-%m-%dT%H:%M:%S.%fZ') + timedelta(hours=9))
+            else:
+                deadLine = None
 
             try:
                 todo = ToDo.objects.get(author=request.user, id=id)
