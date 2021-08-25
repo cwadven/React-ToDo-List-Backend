@@ -3,7 +3,6 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 
-# Create your views here.
 from rest_framework.views import APIView
 
 from Todo.models import ToDo
@@ -26,14 +25,14 @@ class ToDoListAPI(APIView):
             if deadLine:
                 deadLine = (datetime.strptime(deadLine, '%Y-%m-%dT%H:%M:%S.%fZ') + timedelta(hours=9))
 
-            ToDo.objects.create(
+            todo = ToDo.objects.create(
                 author=request.user,
                 startDate=timezone.now(),
                 deadLine=deadLine,
                 text=text,
             )
 
-            return Response(data={"message": "success"}, status=status.HTTP_200_OK)
+            return Response(data={"message": "success", "id": todo.id}, status=status.HTTP_200_OK)
         else:
             return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -54,7 +53,7 @@ class ToDoDetailAPI(APIView):
                 todo.text = text
                 todo.save()
 
-                return Response(data={"message": "success"}, status=status.HTTP_200_OK)
+                return Response(data={"message": "success", "id": todo.id}, status=status.HTTP_200_OK)
             except:
                 return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
         else:
@@ -98,7 +97,7 @@ class CompletedDetailAPI(APIView):
                     todo.completedDate = None
                 todo.save()
 
-                return Response(data={"message": "success"}, status=status.HTTP_200_OK)
+                return Response(data={"message": "success", "id": todo.id}, status=status.HTTP_200_OK)
             except:
                 return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
         else:
