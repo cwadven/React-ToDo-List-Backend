@@ -15,7 +15,7 @@ SECRET_KEY = 's!th1nsocoe58h0yvkj-)4tk%p@%)%3i63s6&iyfa*yj+7oe8e'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False 
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["https://adoring-sammet-a0d202.netlify.app"]
 
 # Application definition
 DJANGO_APPS = [
