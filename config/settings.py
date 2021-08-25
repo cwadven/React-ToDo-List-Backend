@@ -44,6 +44,7 @@ THIRD_APPS = [
 
 PROJECT_APPS = [
     'accounts',
+    'Todo',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + PROJECT_APPS + THIRD_APPS
@@ -62,6 +63,8 @@ REST_FRAMEWORK = {
         # 'rest_framework.authentication.BasicAuthentication',
     ],
 }
+
+APPEND_SLASH = False
 
 # [DRF] 회원가입 시, 입력 요소 변경
 # 유저 모델로 사용하기
