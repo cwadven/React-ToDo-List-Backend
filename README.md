@@ -30,7 +30,7 @@ https://adoring-sammet-a0d202.netlify.app
 
 ### Back End
 
-???
+https://cwadven4.pythonanywhere.com
 
 ## Project Duration
 
@@ -145,3 +145,9 @@ edit . 2021-08-25
 ### Very Simple
 
 ![img_1.png](img_1.png)
+
+## Frontend Info Link
+
+---
+
+https://github.com/cwadven/React-Todo-List
