@@ -26,7 +26,7 @@ edit . 2021-08-25
 
 ### Front End
 
-https://adoring-sammet-a0d202.netlify.app
+https://record-to-do-list.netlify.app/
 
 ### Back End
 
