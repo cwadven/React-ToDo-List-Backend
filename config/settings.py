@@ -2,7 +2,7 @@ from pathlib import Path
 import os
 from django.utils import timezone
 import datetime
-
+from env_key import MY_SECRET_KEY
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -10,12 +10,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 's!th1nsocoe58h0yvkj-)4tk%p@%)%3i63s6&iyfa*yj+7oe8e'
+SECRET_KEY = MY_SECRET_KEY
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False 
 
-ALLOWED_HOSTS = ["https://adoring-sammet-a0d202.netlify.app", "localhost:3000"]
+ALLOWED_HOSTS = ["*"]
 
 # Application definition
 DJANGO_APPS = [
