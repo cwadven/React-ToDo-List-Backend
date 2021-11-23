@@ -20,7 +20,7 @@ edit . 2021-08-25
 
 ## Service Address
 
-edit . 2021-08-25
+edit . 2021-11-24
 
 ---
 
@@ -30,7 +30,7 @@ https://record-to-do-list.netlify.app/
 
 ### Back End
 
-https://cwadven4.pythonanywhere.com
+https://record-to-do-list.shop/
 
 ## Project Duration
 
@@ -42,7 +42,7 @@ edit . 2021-08-25
 
 ## Technologies Used
 
-edit . 2021-08-25
+edit . 2021-11-24
 
 ---
 
@@ -50,11 +50,11 @@ edit . 2021-08-25
 ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E) ![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
 
 #### Backend Stack
-![Django](https://img.shields.io/badge/django-%23092E20.svg?style=for-the-badge&logo=django&logoColor=white) ![DjangoREST](https://img.shields.io/badge/DJANGO-REST-ff1709?style=for-the-badge&logo=django&logoColor=white&color=ff1709&labelColor=gray)
+![Django](https://img.shields.io/badge/django-%23092E20.svg?style=for-the-badge&logo=django&logoColor=white) ![DjangoREST](https://img.shields.io/badge/DJANGO-REST-ff1709?style=for-the-badge&logo=django&logoColor=white&color=ff1709&labelColor=gray) ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 
 ## Deploy
 
-edit . 2021-08-25
+edit . 2021-11-24
 
 ---
 
@@ -64,7 +64,7 @@ edit . 2021-08-25
 
 #### Backend
 
-Pythonanywhere
+![Oracle](https://img.shields.io/badge/Oracle-F80000?style=for-the-badge&logo=oracle&logoColor=white) ![Nginx](https://img.shields.io/badge/nginx-%23009639.svg?style=for-the-badge&logo=nginx&logoColor=white)
 
 ## Developer Information
 
