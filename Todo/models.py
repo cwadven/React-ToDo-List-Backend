@@ -8,6 +8,7 @@ class ToDo(models.Model):
     startDate = models.DateTimeField(null=True, blank=True, db_index=True)
     completedDate = models.DateTimeField(null=True, blank=True, db_index=True)
     deadLine = models.DateTimeField(null=True, blank=True, db_index=True)
+    orderNumber = models.PositiveIntegerField(null=True, blank=True, db_index=True)
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
