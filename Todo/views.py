@@ -1,4 +1,7 @@
 from datetime import datetime, timedelta
+
+from django.db import transaction
+from django.db.models import F, Max
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
@@ -27,11 +30,22 @@ class ToDoListAPI(APIView):
             else:
                 deadLine = None
 
+            # TODO 추후에 Signal 로 작업
+            max_orderNumber = ToDo.objects.filter(
+                author=request.user,
+                completedDate__isnull=True,
+                orderNumber__isnull=False,
+            ).aggregate(max_orderNumber=Max("orderNumber")).get('max_orderNumber')
+
+            if not max_orderNumber:
+                max_orderNumber = 1
+
             todo = ToDo.objects.create(
                 author=request.user,
                 startDate=timezone.now(),
                 deadLine=deadLine,
                 text=text,
+                orderNumber=max_orderNumber + 1,
             )
 
             return Response(data={"message": "success", "id": todo.id}, status=status.HTTP_200_OK)
@@ -66,10 +80,89 @@ class ToDoDetailAPI(APIView):
     def delete(self, request, id):
         if request.user.is_authenticated:
             try:
-                ToDo.objects.get(author=request.user, id=id).delete()
+                with transaction.atomic():
+                    delete_todo = ToDo.objects.get(author=request.user, id=id)
+                    orderNumber = delete_todo.orderNumber
+
+                    # TODO 추후에 Signal 로 작업
+                    ToDo.objects.filter(
+                        author=request.user,
+                        completedDate__isnull=True,
+                        orderNumber__isnull=False,
+                        orderNumber__gt=orderNumber
+                    ).update(
+                        orderNumber=F('orderNumber') - 1
+                    )
+
+                    delete_todo.delete()
+
                 return Response(data={"message": "success"}, status=status.HTTP_200_OK)
             except:
                 return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
+        else:
+            return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class ToDoOrderChangingAPI(APIView):
+    def put(self, request):
+        if request.user.is_authenticated:
+            currentId = request.data.get('currentId')
+            targetId = request.data.get('targetId')
+
+            todo_set = ToDo.objects.filter(author=request.user, completedDate__isnull=True)
+            try:
+                current_todo = todo_set.get(pk=currentId)
+                target_todo = todo_set.get(pk=targetId)
+            except ToDo.DoesNotExist:
+                return Response(data={"message": "bad request"}, status=status.HTTP_403_FORBIDDEN)
+
+            # 위로 이동
+            with transaction.atomic():
+                # NULL 예외처리
+                if target_todo.orderNumber is None and current_todo.orderNumber is None:
+                    todo_set.filter(orderNumber__isnull=False).update(orderNumber=F('orderNumber') + 2)
+
+                    target_todo = todo_set.get(pk=targetId)
+                    target_todo.orderNumber = 2
+                    target_todo.save(update_fields=['orderNumber'])
+
+                    current_todo = todo_set.get(pk=currentId)
+                    current_todo.orderNumber = 1
+                    current_todo.save(update_fields=['orderNumber'])
+                elif target_todo.orderNumber is None:
+                    todo_set.filter(orderNumber__gt=current_todo.orderNumber).update(orderNumber=F('orderNumber') + 1)
+                    todo_set.filter(orderNumber__lt=current_todo.orderNumber).update(orderNumber=F('orderNumber') + 2)
+
+                    target_todo = todo_set.get(pk=targetId)
+                    target_todo.orderNumber = 2
+                    target_todo.save(update_fields=['orderNumber'])
+
+                    current_todo = todo_set.get(pk=currentId)
+                    current_todo.orderNumber = 1
+                    current_todo.save(update_fields=['orderNumber'])
+                elif current_todo.orderNumber is None:
+                    target_todo = todo_set.get(pk=targetId)
+                    to_be_current_order = target_todo.orderNumber
+
+                    todo_set.filter(orderNumber__gte=to_be_current_order).update(orderNumber=F('orderNumber') + 1)
+
+                    current_todo.orderNumber = to_be_current_order
+                    current_todo.save(update_fields=['orderNumber'])
+                elif target_todo.orderNumber and current_todo.orderNumber:
+                    target_todo_orderNumber = target_todo.orderNumber
+                    current_todo_orderNumber = current_todo.orderNumber
+
+                    if target_todo_orderNumber < current_todo_orderNumber:
+                        need_to_modify_ordering_todo_set = todo_set.filter(orderNumber__lt=current_todo_orderNumber, orderNumber__gte=target_todo_orderNumber)
+                        need_to_modify_ordering_todo_set.update(orderNumber=F('orderNumber') + 1)
+                    elif target_todo_orderNumber > current_todo_orderNumber:
+                        need_to_modify_ordering_todo_set = todo_set.filter(orderNumber__lte=target_todo_orderNumber, orderNumber__gt=current_todo_orderNumber)
+                        need_to_modify_ordering_todo_set.update(orderNumber=F('orderNumber') - 1)
+
+                    current_todo.orderNumber = target_todo_orderNumber
+                    current_todo.save(update_fields=['orderNumber'])
+
+            return Response(data={"message": "success"}, status=status.HTTP_200_OK)
         else:
             return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -107,11 +200,34 @@ class CompletedDetailAPI(APIView):
 
             try:
                 todo = ToDo.objects.get(author=request.user, id=id)
-                if not isCompleted:
-                    todo.completedDate = timezone.now()
-                else:
-                    todo.completedDate = None
-                todo.save()
+                with transaction.atomic():
+                    if not isCompleted:
+                        todo.completedDate = timezone.now()
+                        orderNumber = todo.orderNumber
+
+                        ToDo.objects.filter(
+                            author=request.user,
+                            completedDate__isnull=True,
+                            orderNumber__isnull=False,
+                            orderNumber__gt=orderNumber
+                        ).update(
+                            orderNumber=F('orderNumber') - 1
+                        )
+                    else:
+                        todo.completedDate = None
+
+                        max_orderNumber = ToDo.objects.filter(
+                            author=request.user,
+                            completedDate__isnull=True,
+                            orderNumber__isnull=False,
+                        ).aggregate(max_orderNumber=Max("orderNumber")).get('max_orderNumber')
+
+                        if not max_orderNumber:
+                            max_orderNumber = 1
+
+                        todo.orderNumber = max_orderNumber + 1
+
+                    todo.save()
 
                 return Response(data={"message": "success", "id": todo.id}, status=status.HTTP_200_OK)
             except:
