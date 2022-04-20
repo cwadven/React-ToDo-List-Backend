@@ -11,7 +11,7 @@ from Todo.models import ToDo
 class ToDoListAPI(APIView):
     def get(self, request):
         if request.user.is_authenticated:
-            todo_set = ToDo.objects.filter(author=request.user, completedDate__isnull=True).values()
+            todo_set = ToDo.objects.filter(author=request.user, completedDate__isnull=True).order_by('orderNumber').values()
             return Response(data={"todo_set": todo_set}, status=status.HTTP_200_OK)
         else:
             return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
