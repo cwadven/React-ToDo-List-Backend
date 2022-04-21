@@ -1,0 +1,27 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: self-hosted
+
+    steps:
+    - name: Pull Master Branch
+      run: |
+        cd /var/www/React-ToDo-List-Backend/ && sudo git pull origin master
+    - name: pip Update
+      run: |
+        . /var/www/React-ToDo-List-Backend/venv/bin/activate && pip install -r /var/www/React-ToDo-List-Backend/requirements.txt
+    - name: Collectstatic
+      run: |
+        . /var/www/React-ToDo-List-Backend/venv/bin/activate && python /var/www/React-ToDo-List-Backend/manage.py collectstatic --noinput
+    - name: Database Update
+      run: |
+        . /var/www/React-ToDo-List-Backend/venv/bin/activate && python /var/www/React-ToDo-List-Backend/manage.py migrate --noinput
+    - name: Restart server
+      run: |
+        sudo systemctl restart nginx
+        sudo systemctl restart uwsgi
