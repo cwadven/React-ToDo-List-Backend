@@ -19,7 +19,7 @@ class Category(models.Model):
 # To_Do
 class ToDo(models.Model):
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    category = models.ForeignKey(Category, on_delete=models.CASCADE, null=True, default=None)
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, default=None)
     startDate = models.DateTimeField(null=True, blank=True, db_index=True)
     completedDate = models.DateTimeField(null=True, blank=True, db_index=True)
     deadLine = models.DateTimeField(null=True, blank=True, db_index=True)
