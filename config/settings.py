@@ -2,6 +2,8 @@ from pathlib import Path
 import os
 
 import logging
+
+from django.db.models import AutoField
 from django.utils import timezone
 import datetime
 from .env_key import MY_SECRET_KEY
@@ -281,3 +283,5 @@ LOGGING = {
         },
     }
 }
+
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
