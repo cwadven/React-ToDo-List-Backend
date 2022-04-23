@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.db.models import F, Max, QuerySet
 from django.utils import timezone
 from rest_framework import status
@@ -20,7 +20,7 @@ def get_max_int_from_queryset(qs: QuerySet, _from: str) -> Optional[int]:
 class CategoryListAPI(APIView):
     def get(self, request):
         if request.user.is_authenticated:
-            category_set = request.user.category_set.all().order_by('orderNumber')
+            category_set = request.user.category_set.all().order_by('orderNumber').values()
             return Response(data={"category_set": category_set}, status=status.HTTP_200_OK)
         else:
             return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
@@ -28,19 +28,27 @@ class CategoryListAPI(APIView):
     @mandatories('name', 'orderNumber')
     def post(self, request, m):
         if request.user.is_authenticated:
+            orderNumber = int(m['orderNumber'])
 
-            with transaction.atomic():
-                request.user.category_set.filter(
-                    orderNumber__gte=m['orderNumber']
-                ).update(
-                    F('orderNumber') + 1
-                )
+            if orderNumber != 1 and not request.user.category_set.filter(orderNumber__lt=orderNumber).exists():
+                return Response(data={"message": "orderNumber is wrong"}, status=status.HTTP_403_FORBIDDEN)
 
-                category = Category.objects.create(
-                    author=request.user,
-                    name=m['name'],
-                    orderNumber=m['orderNumber'],
-                )
+            try:
+                with transaction.atomic():
+                    request.user.category_set.filter(
+                        orderNumber__gte=orderNumber
+                    ).update(
+                        orderNumber=F('orderNumber') + 1
+                    )
+
+                    category = Category.objects.create(
+                        author=request.user,
+                        name=m['name'],
+                        orderNumber=m['orderNumber'],
+                    )
+            except IntegrityError:
+                return Response(data={"message": "category name already exists"}, status=status.HTTP_403_FORBIDDEN)
+
             return Response(data={"message": "success", "id": category.id}, status=status.HTTP_200_OK)
         else:
             return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
@@ -57,6 +65,8 @@ class CategoryDetailAPI(APIView):
                 category.save(update_fields=['name', 'updated_at'])
             except Category.DoesNotExist:
                 return Response(data={"message": "bad request"}, status=status.HTTP_403_FORBIDDEN)
+            except IntegrityError:
+                return Response(data={"message": "category name already exists"}, status=status.HTTP_403_FORBIDDEN)
 
             return Response(data={"message": "success", "id": category.id}, status=status.HTTP_200_OK)
         else:
@@ -72,7 +82,7 @@ class CategoryDetailAPI(APIView):
                     user_category_set.filter(
                         orderNumber__gt=category.orderNumber
                     ).update(
-                        F('orderNumber') - 1
+                        orderNumber=F('orderNumber') - 1
                     )
                     category.delete()
             except Category.DoesNotExist:
