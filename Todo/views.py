@@ -80,7 +80,6 @@ class ToDoDetailAPI(APIView):
 
                 return Response(data={"message": "success", "id": todo.id}, status=status.HTTP_200_OK)
             except Exception as e:
-                print(e)
                 return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
         else:
             return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
