@@ -60,22 +60,23 @@ class ToDoListAPI(APIView):
 
 
 class ToDoDetailAPI(APIView):
-    def put(self, request, id):
+
+    @mandatories('text')
+    @optionals({'deadLine': None})
+    def put(self, request, id, m, o):
         if request.user.is_authenticated:
-            deadLine = request.data.get('deadLine')
-            text = request.data.get('text')
+            deadLine = o['deadLine']
+            text = m['text']
 
             # 한국 9시간 더하기
             if deadLine:
                 deadLine = (datetime.strptime(deadLine, '%Y-%m-%dT%H:%M:%S.%fZ') + timedelta(hours=9))
-            else:
-                deadLine = None
 
             try:
                 todo = ToDo.objects.get(author=request.user, id=id)
                 todo.deadLine = deadLine
                 todo.text = text
-                todo.save()
+                todo.save(['deadLine', 'text', 'updated_at'])
 
                 return Response(data={"message": "success", "id": todo.id}, status=status.HTTP_200_OK)
             except:
