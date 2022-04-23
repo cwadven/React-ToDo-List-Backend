@@ -1,6 +1,9 @@
 from rest_framework.views import exception_handler
 from rest_framework import exceptions
 from rest_framework.response import Response
+
+from common_library import response_serializer
+from config.common.response_code import STATUS_RSP_INTERNAL_ERROR
 from config.settings import logger
 
 
