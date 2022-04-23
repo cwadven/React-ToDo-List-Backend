@@ -113,10 +113,10 @@ class ToDoDetailAPI(APIView):
 class ToDoOrderChangingAPI(APIView):
 
     @mandatories('currentId', 'targetId')
-    def put(self, request):
+    def put(self, request, m):
         if request.user.is_authenticated:
-            currentId = request.data.get('currentId')
-            targetId = request.data.get('targetId')
+            currentId = m['currentId']
+            targetId = m['targetId']
 
             todo_set = ToDo.objects.filter(author=request.user, completedDate__isnull=True)
             try:
@@ -203,9 +203,11 @@ class CompletedTodayListAPI(APIView):
 
 
 class CompletedDetailAPI(APIView):
-    def put(self, request, id):
+
+    @mandatories('isCompleted')
+    def put(self, request, id, m):
         if request.user.is_authenticated:
-            isCompleted = request.data.get('isCompleted')
+            isCompleted = m['isCompleted']
 
             try:
                 todo = ToDo.objects.get(author=request.user, id=id)
@@ -225,11 +227,12 @@ class CompletedDetailAPI(APIView):
                     else:
                         todo.completedDate = None
 
-                        max_orderNumber = ToDo.objects.filter(
+                        todo_qs = ToDo.objects.filter(
                             author=request.user,
                             completedDate__isnull=True,
                             orderNumber__isnull=False,
-                        ).aggregate(max_orderNumber=Max("orderNumber")).get('max_orderNumber')
+                        )
+                        max_orderNumber = get_max_int_from_queryset(todo_qs, 'orderNumber')
 
                         if not max_orderNumber:
                             max_orderNumber = 1
