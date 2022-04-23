@@ -111,6 +111,8 @@ class ToDoDetailAPI(APIView):
 
 
 class ToDoOrderChangingAPI(APIView):
+
+    @mandatories('currentId', 'targetId')
     def put(self, request):
         if request.user.is_authenticated:
             currentId = request.data.get('currentId')
