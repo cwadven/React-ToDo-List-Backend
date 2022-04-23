@@ -141,7 +141,7 @@ class ToDoListAPI(APIView):
         if request.user.is_authenticated:
             todo_set = ToDo.objects.filter(author=request.user, completedDate__isnull=True).order_by('orderNumber').values(
                 'id',
-                'orderNumber'
+                'orderNumber',
                 'deadLine',
                 'startDate',
                 'completedDate',
@@ -314,7 +314,7 @@ class CompletedListAPI(APIView):
                 completedDate__isnull=False,
             ).values(
                 'id',
-                'orderNumber'
+                'orderNumber',
                 'deadLine',
                 'startDate',
                 'completedDate',
