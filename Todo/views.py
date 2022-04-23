@@ -76,10 +76,11 @@ class ToDoDetailAPI(APIView):
                 todo = ToDo.objects.get(author=request.user, id=id)
                 todo.deadLine = deadLine
                 todo.text = text
-                todo.save(['deadLine', 'text', 'updated_at'])
+                todo.save(update_fields=['deadLine', 'text', 'updated_at'])
 
                 return Response(data={"message": "success", "id": todo.id}, status=status.HTTP_200_OK)
-            except:
+            except Exception as e:
+                print(e)
                 return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
         else:
             return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
