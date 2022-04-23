@@ -20,7 +20,13 @@ def get_max_int_from_queryset(qs: QuerySet, _from: str) -> Optional[int]:
 class CategoryListAPI(APIView):
     def get(self, request):
         if request.user.is_authenticated:
-            category_set = request.user.category_set.all().order_by('orderNumber').values()
+            category_set = request.user.category_set.all().order_by(
+                'orderNumber'
+            ).values(
+                'id',
+                'name',
+                'orderNumber',
+            )
             return Response(data={"category_set": category_set}, status=status.HTTP_200_OK)
         else:
             return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
