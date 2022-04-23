@@ -9,12 +9,115 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from typing import Optional
 
-from Todo.models import ToDo
+from Todo.models import ToDo, Category
 from common_decorator import mandatories, optionals
 
 
 def get_max_int_from_queryset(qs: QuerySet, _from: str) -> Optional[int]:
     return qs.aggregate(_max=Max(_from)).get('_max')
+
+
+class CategoryListAPI(APIView):
+    def get(self, request):
+        if request.user.is_authenticated:
+            category_set = request.user.category_set.all().order_by('orderNumber')
+            return Response(data={"category_set": category_set}, status=status.HTTP_200_OK)
+        else:
+            return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    @mandatories('name', 'orderNumber')
+    def post(self, request, m):
+        if request.user.is_authenticated:
+
+            with transaction.atomic():
+                request.user.category_set.filter(
+                    orderNumber__gte=m['orderNumber']
+                ).update(
+                    F('orderNumber') + 1
+                )
+
+                category = Category.objects.create(
+                    author=request.user,
+                    name=m['name'],
+                    orderNumber=m['orderNumber'],
+                )
+            return Response(data={"message": "success", "id": category.id}, status=status.HTTP_200_OK)
+        else:
+            return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class CategoryDetailAPI(APIView):
+
+    @mandatories('name')
+    def put(self, request, id, m):
+        if request.user.is_authenticated:
+            try:
+                category = request.user.category_set.get(id=id)
+                category.name = m['name']
+                category.save(update_fields=['name', 'updated_at'])
+            except Category.DoesNotExist:
+                return Response(data={"message": "bad request"}, status=status.HTTP_403_FORBIDDEN)
+
+            return Response(data={"message": "success", "id": category.id}, status=status.HTTP_200_OK)
+        else:
+            return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    def delete(self, request, id):
+        if request.user.is_authenticated:
+            try:
+                with transaction.atomic():
+                    user_category_set = request.user.category_set.all()
+
+                    category = user_category_set.get(id=id)
+                    user_category_set.filter(
+                        orderNumber__gt=category.orderNumber
+                    ).update(
+                        F('orderNumber') - 1
+                    )
+                    category.delete()
+            except Category.DoesNotExist:
+                return Response(data={"message": "bad request"}, status=status.HTTP_403_FORBIDDEN)
+
+            return Response(data={"message": "success", "id": category.id}, status=status.HTTP_200_OK)
+        else:
+            return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class CategoryOrderChangingAPI(APIView):
+
+    @mandatories('targetId', 'currentId')
+    def put(self, request, m):
+        if request.user.is_authenticated:
+            currentId = m['currentId']
+            targetId = m['targetId']
+
+            category_set = Category.objects.filter(author=request.user)
+
+            try:
+                current_category = category_set.get(pk=currentId)
+                target_category = category_set.get(pk=targetId)
+            except Category.DoesNotExist:
+                return Response(data={"message": "bad request"}, status=status.HTTP_403_FORBIDDEN)
+
+            with transaction.atomic():
+                target_category_orderNumber = target_category.orderNumber
+                current_category_orderNumber = current_category.orderNumber
+
+                if target_category_orderNumber < current_category_orderNumber:
+                    need_to_modify_ordering_category_set = category_set.filter(orderNumber__lt=current_category_orderNumber,
+                                                                       orderNumber__gte=target_category_orderNumber)
+                    need_to_modify_ordering_category_set.update(orderNumber=F('orderNumber') + 1)
+                elif target_category_orderNumber > current_category_orderNumber:
+                    need_to_modify_ordering_category_set = category_set.filter(orderNumber__lte=target_category_orderNumber,
+                                                                       orderNumber__gt=current_category_orderNumber)
+                    need_to_modify_ordering_category_set.update(orderNumber=F('orderNumber') - 1)
+
+                current_category.orderNumber = target_category_orderNumber
+                current_category.save(update_fields=['orderNumber'])
+
+            return Response(data={"message": "success"}, status=status.HTTP_200_OK)
+        else:
+            return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class ToDoListAPI(APIView):
@@ -26,7 +129,7 @@ class ToDoListAPI(APIView):
             return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
 
     @mandatories('text')
-    @optionals({'deadLine': None})
+    @optionals({'deadLine': None}, {'categoryId': None})
     def post(self, request, m, o):
         if request.user.is_authenticated:
             deadLine = o['deadLine']
@@ -51,6 +154,7 @@ class ToDoListAPI(APIView):
                 startDate=timezone.now(),
                 deadLine=deadLine,
                 text=text,
+                category_id=o['categoryId'],
                 orderNumber=max_orderNumber + 1,
             )
 
