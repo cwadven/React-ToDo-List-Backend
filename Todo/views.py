@@ -1,14 +1,20 @@
 from datetime import datetime, timedelta
 
 from django.db import transaction
-from django.db.models import F, Max
+from django.db.models import F, Max, QuerySet
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 
 from rest_framework.views import APIView
+from typing import Optional
 
 from Todo.models import ToDo
+from common_decorator import mandatories, optionals
+
+
+def get_max_int_from_queryset(qs: QuerySet, _from: str) -> Optional[int]:
+    return qs.aggregate(_max=Max(_from)).get('_max')
 
 
 class ToDoListAPI(APIView):
@@ -19,23 +25,23 @@ class ToDoListAPI(APIView):
         else:
             return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
 
-    def post(self, request):
+    @mandatories('text')
+    @optionals({'deadLine': None})
+    def post(self, request, m, o):
         if request.user.is_authenticated:
-            deadLine = request.data.get('deadLine')
-            text = request.data.get('text')
+            deadLine = o['deadLine']
+            text = m['text']
 
             # 한국 9시간 더하기
             if deadLine:
                 deadLine = (datetime.strptime(deadLine, '%Y-%m-%dT%H:%M:%S.%fZ') + timedelta(hours=9))
-            else:
-                deadLine = None
 
-            # TODO 추후에 Signal 로 작업
-            max_orderNumber = ToDo.objects.filter(
+            todo_qs = ToDo.objects.filter(
                 author=request.user,
                 completedDate__isnull=True,
                 orderNumber__isnull=False,
-            ).aggregate(max_orderNumber=Max("orderNumber")).get('max_orderNumber')
+            )
+            max_orderNumber = get_max_int_from_queryset(todo_qs, 'orderNumber')
 
             if not max_orderNumber:
                 max_orderNumber = 1
