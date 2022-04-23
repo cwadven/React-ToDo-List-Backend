@@ -3,6 +3,9 @@ import os
 from django.utils import timezone
 import datetime
 from .env_key import MY_SECRET_KEY
+
+SERVER_ENV = os.environ.get('SERVER_ENV')
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -12,10 +15,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = MY_SECRET_KEY
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False 
-
-ALLOWED_HOSTS = ["record-to-do-list.shop"]
+if SERVER_ENV == 'Local':
+    DEBUG = True
+    ALLOWED_HOSTS = ["*"]
+else:
+    DEBUG = False
+    ALLOWED_HOSTS = ["record-to-do-list.shop"]
 
 # Application definition
 DJANGO_APPS = [
