@@ -36,7 +36,7 @@ class CategoryListAPI(APIView):
         if request.user.is_authenticated:
             orderNumber = int(m['orderNumber'])
 
-            if orderNumber != 1 and not request.user.category_set.filter(orderNumber__lt=orderNumber).exists():
+            if orderNumber != 1 and not request.user.category_set.filter(orderNumber=orderNumber-1).exists():
                 return Response(data={"message": "orderNumber is wrong"}, status=status.HTTP_403_FORBIDDEN)
 
             try:
