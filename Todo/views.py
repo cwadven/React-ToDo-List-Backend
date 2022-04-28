@@ -311,7 +311,9 @@ class ToDoOrderChangingAPI(APIView):
 class CompletedListAPI(APIView):
     def get(self, request):
         if request.user.is_authenticated:
-            completed_set = ToDo.objects.filter(
+            completed_set = ToDo.objects.select_related(
+                'category'
+            ).filter(
                 author=request.user,
                 completedDate__isnull=False,
             ).values(
@@ -333,12 +335,24 @@ class CompletedListAPI(APIView):
 class CompletedTodayListAPI(APIView):
     def get(self, request):
         if request.user.is_authenticated:
-            completed_set = ToDo.objects.filter(
+            completed_set = ToDo.objects.select_related(
+                'category'
+            ).filter(
                 author=request.user,
                 completedDate__year=timezone.now().year,
                 completedDate__month=timezone.now().month,
                 completedDate__day=timezone.now().day,
-            ).values()
+            ).values(
+                'id',
+                'orderNumber',
+                'deadLine',
+                'startDate',
+                'completedDate',
+                'updated_at',
+                'text',
+                'category__id',
+                'category__name',
+            )
             return Response(data={"completed_set": completed_set}, status=status.HTTP_200_OK)
         else:
             return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
