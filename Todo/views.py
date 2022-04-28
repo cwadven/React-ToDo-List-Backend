@@ -68,16 +68,17 @@ class CategoryDetailAPI(APIView):
             try:
                 with transaction.atomic():
                     update_fields = ['name', 'updated_at']
+                    orderNumber = int(m['orderNumber'])
 
-                    if m['orderNumber'] != 1 and not request.user.category_set.filter(orderNumber=m['orderNumber'] - 1).exists():
+                    if orderNumber != 1 and not request.user.category_set.filter(orderNumber=orderNumber - 1).exists():
                         return Response(data={"message": "orderNumber is wrong"}, status=status.HTTP_403_FORBIDDEN)
 
                     category_set = request.user.category_set.all()
                     category = category_set.get(id=id)
                     category.name = m['name']
 
-                    if category.orderNumber != m['orderNumber']:
-                        target_category_orderNumber = m['orderNumber']
+                    if category.orderNumber != orderNumber:
+                        target_category_orderNumber = orderNumber
                         current_category_orderNumber = category.orderNumber
 
                         if target_category_orderNumber < current_category_orderNumber:
@@ -90,7 +91,7 @@ class CategoryDetailAPI(APIView):
                             need_to_modify_ordering_category_set.update(orderNumber=F('orderNumber') - 1)
 
                         update_fields.append('orderNumber')
-                        category.orderNumber = m['orderNumber']
+                        category.orderNumber = orderNumber
 
                     category.save(update_fields=update_fields)
             except Category.DoesNotExist:
