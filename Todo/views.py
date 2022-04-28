@@ -62,13 +62,37 @@ class CategoryListAPI(APIView):
 
 class CategoryDetailAPI(APIView):
 
-    @mandatories('name')
+    @mandatories('name', 'orderNumber')
     def put(self, request, id, m):
         if request.user.is_authenticated:
             try:
-                category = request.user.category_set.get(id=id)
-                category.name = m['name']
-                category.save(update_fields=['name', 'updated_at'])
+                with transaction.atomic():
+                    update_fields = ['name', 'updated_at']
+
+                    if m['orderNumber'] != 1 and not request.user.category_set.filter(orderNumber=m['orderNumber'] - 1).exists():
+                        return Response(data={"message": "orderNumber is wrong"}, status=status.HTTP_403_FORBIDDEN)
+
+                    category_set = request.user.category_set.all()
+                    category = category_set.get(id=id)
+                    category.name = m['name']
+
+                    if category.orderNumber != m['orderNumber']:
+                        target_category_orderNumber = m['orderNumber']
+                        current_category_orderNumber = category.orderNumber
+
+                        if target_category_orderNumber < current_category_orderNumber:
+                            need_to_modify_ordering_category_set = category_set.filter(orderNumber__lt=current_category_orderNumber,
+                                                                               orderNumber__gte=target_category_orderNumber)
+                            need_to_modify_ordering_category_set.update(orderNumber=F('orderNumber') + 1)
+                        elif target_category_orderNumber > current_category_orderNumber:
+                            need_to_modify_ordering_category_set = category_set.filter(orderNumber__lte=target_category_orderNumber,
+                                                                               orderNumber__gt=current_category_orderNumber)
+                            need_to_modify_ordering_category_set.update(orderNumber=F('orderNumber') - 1)
+
+                        update_fields.append('orderNumber')
+                        category.orderNumber = m['orderNumber']
+
+                    category.save(update_fields=update_fields)
             except Category.DoesNotExist:
                 return Response(data={"message": "bad request"}, status=status.HTTP_403_FORBIDDEN)
             except IntegrityError:
