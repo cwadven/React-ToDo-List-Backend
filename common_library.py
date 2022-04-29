@@ -1,5 +1,7 @@
 # 필수 값
+from django.db.models import QuerySet, Max
 from rest_framework.exceptions import APIException
+from typing import Optional
 
 from config.common.response_code import STATUS_RSP_MISSING_MANDATORY_PARAM
 
@@ -51,3 +53,6 @@ def optional_key(request, name, default_value=''):
             data = default_value
     return data
 
+
+def get_max_int_from_queryset(qs: QuerySet, _from: str) -> Optional[int]:
+    return qs.aggregate(_max=Max(_from)).get('_max')

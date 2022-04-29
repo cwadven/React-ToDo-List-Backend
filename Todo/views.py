@@ -1,20 +1,16 @@
 from datetime import datetime, timedelta
 
 from django.db import transaction, IntegrityError
-from django.db.models import F, Max, QuerySet
+from django.db.models import F
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 
 from rest_framework.views import APIView
-from typing import Optional
 
 from Todo.models import ToDo, Category
 from common_decorator import mandatories, optionals
-
-
-def get_max_int_from_queryset(qs: QuerySet, _from: str) -> Optional[int]:
-    return qs.aggregate(_max=Max(_from)).get('_max')
+from common_library import get_max_int_from_queryset
 
 
 class CategoryListAPI(APIView):
