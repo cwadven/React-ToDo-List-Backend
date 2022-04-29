@@ -22,7 +22,7 @@ def cus_exception_handler(exc, context):
             msg = exc.detail
         elif isinstance(exc, exceptions.NotAuthenticated):
             code = response.status_code
-            msg = exc.detail
+            msg = "No Auth"
         elif isinstance(exc, exceptions.PermissionDenied):
             code = response.status_code
             msg = exc.detail
