@@ -284,12 +284,22 @@ class ToDoOrderChangingAPI(APIView):
 class CompletedListAPI(APIView):
     permission_classes = (IsAuthenticated,)
 
-    def get(self, request):
+    @optionals({'categoryId': None})
+    def get(self, request, o):
+        q = Q(author=request.user, completedDate__isnull=False)
+        categoryId = o['categoryId']
+
+        if o['categoryId'] == 'null':
+            q &= Q(category__isnull=True)
+        elif categoryId is not None:
+            q &= Q(category_id=categoryId)
+
         completed_qs = ToDo.objects.select_related(
             'category'
         ).filter(
-            author=request.user,
-            completedDate__isnull=False,
+            q
+        ).order_by(
+            'completedDate'
         )
         completed_set = ToDoListSerializer(completed_qs, many=True).data
         return Response(data={"completed_set": completed_set}, status=status.HTTP_200_OK)
@@ -298,14 +308,27 @@ class CompletedListAPI(APIView):
 class CompletedTodayListAPI(APIView):
     permission_classes = (IsAuthenticated,)
 
-    def get(self, request):
-        completed_qs = ToDo.objects.select_related(
-            'category'
-        ).filter(
+    @optionals({'categoryId': None})
+    def get(self, request, o):
+        q = Q(
             author=request.user,
             completedDate__year=timezone.now().year,
             completedDate__month=timezone.now().month,
             completedDate__day=timezone.now().day,
+        )
+        categoryId = o['categoryId']
+
+        if o['categoryId'] == 'null':
+            q &= Q(category__isnull=True)
+        elif categoryId is not None:
+            q &= Q(category_id=categoryId)
+
+        completed_qs = ToDo.objects.select_related(
+            'category'
+        ).filter(
+            q
+        ).order_by(
+            'completedDate'
         )
         completed_set = ToDoListSerializer(completed_qs, many=True).data
         return Response(data={"completed_set": completed_set}, status=status.HTTP_200_OK)
