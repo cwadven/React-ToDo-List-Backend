@@ -4,7 +4,7 @@ from datetime import (
 )
 
 from django.db import transaction, IntegrityError
-from django.db.models import F
+from django.db.models import F, Q
 from django.utils import timezone
 
 from rest_framework import status
@@ -115,13 +115,23 @@ class CategoryDetailAPI(APIView):
 class ToDoListAPI(APIView):
     permission_classes = (IsAuthenticated,)
 
-    def get(self, request):
+    @optionals({'categoryId': None})
+    def get(self, request, o):
+        q = Q(author=request.user, completedDate__isnull=True)
+        categoryId = o['categoryId']
+
+        if o['categoryId'] == 'null':
+            q &= Q(category__isnull=True)
+        elif categoryId is not None:
+            q &= Q(category_id=categoryId)
+
         todo_qs = ToDo.objects.select_related(
             'category'
         ).filter(
-            author=request.user,
-            completedDate__isnull=True
-        ).order_by('orderNumber')
+            q
+        ).order_by(
+            'orderNumber'
+        )
         todo_set = ToDoListSerializer(todo_qs, many=True).data
 
         return Response(data={"todo_set": todo_set}, status=status.HTTP_200_OK)
@@ -151,7 +161,6 @@ class ToDoListAPI(APIView):
             return Response(data={"message": "success", "id": instance.id}, status=status.HTTP_200_OK)
         else:
             return Response(data={"message": serializer.errors}, status=status.HTTP_403_FORBIDDEN)
-
 
 
 class ToDoDetailAPI(APIView):
@@ -263,7 +272,8 @@ class ToDoOrderChangingAPI(APIView):
                 target_todo_orderNumber = target_todo.orderNumber
                 current_todo_orderNumber = current_todo.orderNumber
 
-                make_space_ordering_from_queryset(todo_set, current_todo_orderNumber, target_todo_orderNumber, 'orderNumber')
+                make_space_ordering_from_queryset(todo_set, current_todo_orderNumber, target_todo_orderNumber,
+                                                  'orderNumber')
 
                 current_todo.orderNumber = target_todo_orderNumber
                 current_todo.save(update_fields=['orderNumber'])
