@@ -1,56 +1,67 @@
-from datetime import datetime, timedelta
+from datetime import (
+    datetime,
+    timedelta
+)
 
 from django.db import transaction, IntegrityError
 from django.db.models import F
 from django.utils import timezone
+
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
 from rest_framework.views import APIView
 
-from Todo.models import ToDo, Category
-from common_decorator import mandatories, optionals
-from common_library import get_max_int_from_queryset
+from Todo.models import (
+    ToDo,
+    Category
+)
+from Todo.serializers import (
+    CategoryListSerializer,
+    CategoryCreateUpdateSerializer,
+    ToDoListSerializer,
+    ToDoCreateUpdateSerializer
+)
+from common_decorator import (
+    mandatories,
+    optionals
+)
+from common_library import (
+    get_max_int_from_queryset,
+    make_space_ordering_from_queryset
+)
 
 
 class CategoryListAPI(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        category_set = request.user.category_set.all().order_by(
-            'orderNumber'
-        ).values(
-            'id',
-            'name',
-            'orderNumber',
-        )
+        category_qs = request.user.category_set.all().order_by('orderNumber')
+        category_set = CategoryListSerializer(category_qs, many=True).data
+
         return Response(data={"category_set": category_set}, status=status.HTTP_200_OK)
 
     @mandatories('name', 'orderNumber')
     def post(self, request, m):
-        orderNumber = int(m['orderNumber'])
-
-        if orderNumber != 1 and not request.user.category_set.filter(orderNumber=orderNumber-1).exists():
-            return Response(data={"message": "orderNumber is wrong"}, status=status.HTTP_403_FORBIDDEN)
-
         try:
             with transaction.atomic():
-                request.user.category_set.filter(
-                    orderNumber__gte=orderNumber
-                ).update(
-                    orderNumber=F('orderNumber') + 1
+                serializer = CategoryCreateUpdateSerializer(
+                    data={
+                        "author": request.user.id,
+                        "name": m['name'],
+                        "orderNumber": m['orderNumber']
+                    },
+                    context={'request': request}
                 )
 
-                category = Category.objects.create(
-                    author=request.user,
-                    name=m['name'],
-                    orderNumber=m['orderNumber'],
-                )
+                if serializer.is_valid():
+                    category = serializer.save()
+                    return Response(data={"message": "success", "id": category.id}, status=status.HTTP_200_OK)
+                else:
+                    return Response(data={"message": serializer.errors}, status=status.HTTP_403_FORBIDDEN)
+
         except IntegrityError:
             return Response(data={"message": "category name already exists"}, status=status.HTTP_403_FORBIDDEN)
-
-        return Response(data={"message": "success", "id": category.id}, status=status.HTTP_200_OK)
 
 
 class CategoryDetailAPI(APIView):
@@ -60,39 +71,28 @@ class CategoryDetailAPI(APIView):
     def put(self, request, id, m):
         try:
             with transaction.atomic():
-                update_fields = ['name', 'updated_at']
                 orderNumber = int(m['orderNumber'])
 
-                if orderNumber != 1 and not request.user.category_set.filter(orderNumber=orderNumber - 1).exists():
-                    return Response(data={"message": "orderNumber is wrong"}, status=status.HTTP_403_FORBIDDEN)
+                category = Category.objects.get(
+                    id=id,
+                    author=request.user
+                )
 
-                category_set = request.user.category_set.all()
-                category = category_set.get(id=id)
-                category.name = m['name']
-
-                if category.orderNumber != orderNumber:
-                    target_category_orderNumber = orderNumber
-                    current_category_orderNumber = category.orderNumber
-
-                    if target_category_orderNumber < current_category_orderNumber:
-                        need_to_modify_ordering_category_set = category_set.filter(orderNumber__lt=current_category_orderNumber,
-                                                                           orderNumber__gte=target_category_orderNumber)
-                        need_to_modify_ordering_category_set.update(orderNumber=F('orderNumber') + 1)
-                    elif target_category_orderNumber > current_category_orderNumber:
-                        need_to_modify_ordering_category_set = category_set.filter(orderNumber__lte=target_category_orderNumber,
-                                                                           orderNumber__gt=current_category_orderNumber)
-                        need_to_modify_ordering_category_set.update(orderNumber=F('orderNumber') - 1)
-
-                    update_fields.append('orderNumber')
-                    category.orderNumber = orderNumber
-
-                category.save(update_fields=update_fields)
+                serializer = CategoryCreateUpdateSerializer(
+                    category,
+                    data={
+                        "name": m['name'],
+                        "orderNumber": orderNumber
+                    },
+                    context={'request': request}
+                )
+                if serializer.is_valid():
+                    category = serializer.save()
+                    return Response(data={"message": "success", "id": category.id}, status=status.HTTP_200_OK)
+                else:
+                    return Response(data={"message": serializer.errors}, status=status.HTTP_403_FORBIDDEN)
         except Category.DoesNotExist:
             return Response(data={"message": "bad request"}, status=status.HTTP_403_FORBIDDEN)
-        except IntegrityError:
-            return Response(data={"message": "category name already exists"}, status=status.HTTP_403_FORBIDDEN)
-
-        return Response(data={"message": "success", "id": category.id}, status=status.HTTP_200_OK)
 
     def delete(self, request, id):
         try:
@@ -112,88 +112,46 @@ class CategoryDetailAPI(APIView):
         return Response(data={"message": "success", "id": category.id}, status=status.HTTP_200_OK)
 
 
-class CategoryOrderChangingAPI(APIView):
-    permission_classes = (IsAuthenticated,)
-
-    @mandatories('targetId', 'currentId')
-    def put(self, request, m):
-        currentId = m['currentId']
-        targetId = m['targetId']
-
-        category_set = Category.objects.filter(author=request.user)
-
-        try:
-            current_category = category_set.get(pk=currentId)
-            target_category = category_set.get(pk=targetId)
-        except Category.DoesNotExist:
-            return Response(data={"message": "bad request"}, status=status.HTTP_403_FORBIDDEN)
-
-        with transaction.atomic():
-            target_category_orderNumber = target_category.orderNumber
-            current_category_orderNumber = current_category.orderNumber
-
-            if target_category_orderNumber < current_category_orderNumber:
-                need_to_modify_ordering_category_set = category_set.filter(orderNumber__lt=current_category_orderNumber,
-                                                                   orderNumber__gte=target_category_orderNumber)
-                need_to_modify_ordering_category_set.update(orderNumber=F('orderNumber') + 1)
-            elif target_category_orderNumber > current_category_orderNumber:
-                need_to_modify_ordering_category_set = category_set.filter(orderNumber__lte=target_category_orderNumber,
-                                                                   orderNumber__gt=current_category_orderNumber)
-                need_to_modify_ordering_category_set.update(orderNumber=F('orderNumber') - 1)
-
-            current_category.orderNumber = target_category_orderNumber
-            current_category.save(update_fields=['orderNumber'])
-
-        return Response(data={"message": "success"}, status=status.HTTP_200_OK)
-
-
 class ToDoListAPI(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        todo_set = ToDo.objects.filter(author=request.user, completedDate__isnull=True).order_by('orderNumber').values(
-            'id',
-            'orderNumber',
-            'deadLine',
-            'startDate',
-            'completedDate',
-            'updated_at',
-            'text',
-            'category__id',
-            'category__name',
-        )
+        todo_qs = ToDo.objects.select_related(
+            'category'
+        ).filter(
+            author=request.user,
+            completedDate__isnull=True
+        ).order_by('orderNumber')
+        todo_set = ToDoListSerializer(todo_qs, many=True).data
+
         return Response(data={"todo_set": todo_set}, status=status.HTTP_200_OK)
 
     @mandatories('text')
     @optionals({'deadLine': None}, {'categoryId': None})
     def post(self, request, m, o):
         deadLine = o['deadLine']
-        text = m['text']
 
         # 한국 9시간 더하기
         if deadLine:
             deadLine = (datetime.strptime(deadLine, '%Y-%m-%dT%H:%M:%S.%fZ') + timedelta(hours=9))
 
-        todo_qs = ToDo.objects.filter(
-            author=request.user,
-            completedDate__isnull=True,
-            orderNumber__isnull=False,
-        )
-        max_orderNumber = get_max_int_from_queryset(todo_qs, 'orderNumber')
-
-        if not max_orderNumber:
-            max_orderNumber = 1
-
-        todo = ToDo.objects.create(
-            author=request.user,
-            startDate=timezone.now(),
-            deadLine=deadLine,
-            text=text,
-            category_id=o['categoryId'],
-            orderNumber=max_orderNumber + 1,
+        serializer = ToDoCreateUpdateSerializer(
+            data={
+                "author": request.user.id,
+                "startDate": timezone.now(),
+                "deadLine": deadLine,
+                "text": m['text'],
+                "category": o['categoryId'],
+            },
+            context={'request': request}
         )
 
-        return Response(data={"message": "success", "id": todo.id}, status=status.HTTP_200_OK)
+        if serializer.is_valid():
+            instance = serializer.save()
+            return Response(data={"message": "success", "id": instance.id}, status=status.HTTP_200_OK)
+        else:
+            return Response(data={"message": serializer.errors}, status=status.HTTP_403_FORBIDDEN)
+
 
 
 class ToDoDetailAPI(APIView):
@@ -203,22 +161,31 @@ class ToDoDetailAPI(APIView):
     @optionals({'deadLine': None}, {'categoryId': None})
     def put(self, request, id, m, o):
         deadLine = o['deadLine']
-        text = m['text']
-        categoryId = o['categoryId']
 
         # 한국 9시간 더하기
         if deadLine:
             deadLine = (datetime.strptime(deadLine, '%Y-%m-%dT%H:%M:%S.%fZ') + timedelta(hours=9))
 
         try:
-            todo = ToDo.objects.get(author=request.user, id=id)
-            todo.deadLine = deadLine
-            todo.text = text
-            todo.category_id = categoryId
-            todo.save(update_fields=['deadLine', 'text', 'category_id', 'updated_at'])
+            with transaction.atomic():
+                todo = ToDo.objects.get(author=request.user, id=id)
 
-            return Response(data={"message": "success", "id": todo.id}, status=status.HTTP_200_OK)
-        except Exception as e:
+                serializer = ToDoCreateUpdateSerializer(
+                    todo,
+                    data={
+                        "deadLine": deadLine,
+                        "text": m['text'],
+                        "category": o['categoryId'],
+                    },
+                    context={'request': request}
+                )
+
+                if serializer.is_valid():
+                    instance = serializer.save()
+                    return Response(data={"message": "success", "id": instance.id}, status=status.HTTP_200_OK)
+                else:
+                    return Response(data={"message": serializer.errors}, status=status.HTTP_403_FORBIDDEN)
+        except ToDo.DoesNotExist:
             return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
 
     def delete(self, request, id):
@@ -227,20 +194,21 @@ class ToDoDetailAPI(APIView):
                 delete_todo = ToDo.objects.get(author=request.user, id=id)
                 orderNumber = delete_todo.orderNumber
 
-                # TODO 추후에 Signal 로 작업
-                ToDo.objects.filter(
-                    author=request.user,
-                    completedDate__isnull=True,
-                    orderNumber__isnull=False,
-                    orderNumber__gt=orderNumber
-                ).update(
-                    orderNumber=F('orderNumber') - 1
-                )
+                if orderNumber:
+                    # TODO 추후에 Signal 로 작업
+                    ToDo.objects.filter(
+                        author=request.user,
+                        completedDate__isnull=True,
+                        orderNumber__isnull=False,
+                        orderNumber__gt=orderNumber
+                    ).update(
+                        orderNumber=F('orderNumber') - 1
+                    )
 
                 delete_todo.delete()
 
             return Response(data={"message": "success"}, status=status.HTTP_200_OK)
-        except:
+        except Exception as e:
             return Response(data={"message": "No Auth"}, status=status.HTTP_401_UNAUTHORIZED)
 
 
@@ -295,12 +263,7 @@ class ToDoOrderChangingAPI(APIView):
                 target_todo_orderNumber = target_todo.orderNumber
                 current_todo_orderNumber = current_todo.orderNumber
 
-                if target_todo_orderNumber < current_todo_orderNumber:
-                    need_to_modify_ordering_todo_set = todo_set.filter(orderNumber__lt=current_todo_orderNumber, orderNumber__gte=target_todo_orderNumber)
-                    need_to_modify_ordering_todo_set.update(orderNumber=F('orderNumber') + 1)
-                elif target_todo_orderNumber > current_todo_orderNumber:
-                    need_to_modify_ordering_todo_set = todo_set.filter(orderNumber__lte=target_todo_orderNumber, orderNumber__gt=current_todo_orderNumber)
-                    need_to_modify_ordering_todo_set.update(orderNumber=F('orderNumber') - 1)
+                make_space_ordering_from_queryset(todo_set, current_todo_orderNumber, target_todo_orderNumber, 'orderNumber')
 
                 current_todo.orderNumber = target_todo_orderNumber
                 current_todo.save(update_fields=['orderNumber'])
@@ -312,22 +275,13 @@ class CompletedListAPI(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        completed_set = ToDo.objects.select_related(
+        completed_qs = ToDo.objects.select_related(
             'category'
         ).filter(
             author=request.user,
             completedDate__isnull=False,
-        ).values(
-            'id',
-            'orderNumber',
-            'deadLine',
-            'startDate',
-            'completedDate',
-            'updated_at',
-            'text',
-            'category__id',
-            'category__name',
         )
+        completed_set = ToDoListSerializer(completed_qs, many=True).data
         return Response(data={"completed_set": completed_set}, status=status.HTTP_200_OK)
 
 
@@ -335,24 +289,15 @@ class CompletedTodayListAPI(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        completed_set = ToDo.objects.select_related(
+        completed_qs = ToDo.objects.select_related(
             'category'
         ).filter(
             author=request.user,
             completedDate__year=timezone.now().year,
             completedDate__month=timezone.now().month,
             completedDate__day=timezone.now().day,
-        ).values(
-            'id',
-            'orderNumber',
-            'deadLine',
-            'startDate',
-            'completedDate',
-            'updated_at',
-            'text',
-            'category__id',
-            'category__name',
         )
+        completed_set = ToDoListSerializer(completed_qs, many=True).data
         return Response(data={"completed_set": completed_set}, status=status.HTTP_200_OK)
 
 
@@ -390,8 +335,10 @@ class CompletedDetailAPI(APIView):
 
                     if not max_orderNumber:
                         max_orderNumber = 1
+                    else:
+                        max_orderNumber += 1
 
-                    todo.orderNumber = max_orderNumber + 1
+                    todo.orderNumber = max_orderNumber
 
                 todo.save()
 
