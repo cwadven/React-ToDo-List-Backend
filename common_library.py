@@ -41,13 +41,13 @@ def optional_key(request, name, default_value=''):
             data = request.GET[name]
         else:
             data = request.POST[name]
-        if data in ["", None, 'null', 'undefined']:
+        if data in ["", None]:
             data = default_value
     except:
         try:
             json_body = request.data
             data = json_body[name]
-            if data in ["", None, 'null', 'undefined']:
+            if data in ["", None]:
                 data = default_value
         except:
             data = default_value
