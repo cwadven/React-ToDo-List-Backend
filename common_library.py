@@ -1,5 +1,5 @@
 # 필수 값
-from django.db.models import QuerySet, Max
+from django.db.models import QuerySet, Max, F
 from rest_framework.exceptions import APIException
 from typing import Optional
 
@@ -54,5 +54,33 @@ def optional_key(request, name, default_value=''):
     return data
 
 
-def get_max_int_from_queryset(qs: QuerySet, _from: str) -> Optional[int]:
-    return qs.aggregate(_max=Max(_from)).get('_max')
+def get_max_int_from_queryset(qs: QuerySet, field_name: str) -> Optional[int]:
+    return qs.aggregate(_max=Max(field_name)).get('_max')
+
+
+def make_space_ordering_from_queryset(qs: QuerySet, current_order_number: int, target_order_number: int, field_name: str) -> None:
+    """
+    make space to set ordering.
+    if `target_order_number` is lower than `current_order_number` get lower orderNumbers then make space by adding 1 orderNumber
+    else `current_order_number` is lower than `target_order_number` get upper orderNumbers then make space by subtract 1 orderNumber
+    """
+
+    get_lower_order_number_option = {
+        f'{field_name}__lt': current_order_number,
+        f'{field_name}__gte': target_order_number,
+    }
+    get_upper_order_number_option = {
+        f'{field_name}__lte': target_order_number,
+        f'{field_name}__gt': current_order_number,
+    }
+
+    if target_order_number < current_order_number:
+        need_to_modify_ordering_qs = qs.filter(
+            **get_lower_order_number_option
+        )
+        need_to_modify_ordering_qs.update(orderNumber=F('orderNumber') + 1)
+    elif target_order_number > current_order_number:
+        need_to_modify_ordering_qs = qs.filter(
+            **get_upper_order_number_option
+        )
+        need_to_modify_ordering_qs.update(orderNumber=F('orderNumber') - 1)
