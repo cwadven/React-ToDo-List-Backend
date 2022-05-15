@@ -1,10 +1,14 @@
 # 필수 값
 from django.db.models import QuerySet, Max, F
 from rest_framework.exceptions import APIException
+from rest_framework_jwt.settings import api_settings
 from typing import Optional
 
 from config.common.response_code import STATUS_RSP_MISSING_MANDATORY_PARAM
 
+jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
+jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
+jwt_decode_handler = api_settings.JWT_DECODE_HANDLER
 
 def response_serializer(code, data=None, message=None):
     json_data = dict()
@@ -84,3 +88,9 @@ def make_space_ordering_from_queryset(qs: QuerySet, current_order_number: int, t
             **get_upper_order_number_option
         )
         need_to_modify_ordering_qs.update(orderNumber=F('orderNumber') - 1)
+
+
+def get_login_token(user):
+    payload = jwt_payload_handler(user)
+    token = jwt_encode_handler(payload)
+    return token
