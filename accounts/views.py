@@ -1,4 +1,6 @@
+from django.contrib.auth import login, authenticate
 from django.shortcuts import render
+from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -11,6 +13,30 @@ from rest_framework.permissions import AllowAny
 
 # from allauth.account.utils import send_email_confirmation
 # from allauth.account.models import EmailAddress
+from rest_framework.views import APIView
+
+from common_decorator import mandatories
+from common_library import get_login_token
+from config.common.response_code import STATUS_LOGIN_FAIL
+
+
+class LoginAPI(APIView):
+    @mandatories('username', 'password')
+    def post(self, request, m):
+        user = authenticate(
+            username=m['username'],
+            password=m['password'],
+        )
+
+        if not user:
+            raise APIException(STATUS_LOGIN_FAIL)
+
+        login(request, user)
+        context = {
+            "message": "success",
+            "token": get_login_token(user),
+        }
+        return Response(data=context, status=status.HTTP_200_OK)
 
 # 메일 인증 처리
 # class ConfirmEmailView(APIView):
