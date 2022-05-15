@@ -71,7 +71,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
     ],
-    'EXCEPTION_HANDLER': 'config.common.api_exception.cus_exception_handler'
+    # 'EXCEPTION_HANDLER': 'config.common.api_exception.cus_exception_handler'
 }
 
 APPEND_SLASH = False
