@@ -10,6 +10,7 @@ jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
 jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
 jwt_decode_handler = api_settings.JWT_DECODE_HANDLER
 
+
 def response_serializer(code, data=None, message=None):
     json_data = dict()
     json_data["code"] = code.get("code")
