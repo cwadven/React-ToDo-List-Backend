@@ -8,11 +8,13 @@ from rest_auth.views import (
     PasswordResetView, PasswordResetConfirmView
 )
 
+from accounts.views import LoginAPI
+
 urlpatterns = [
     # 회원가입
     path("registration", RegisterView.as_view(), name='rest_register'),
     # 로그인, 로그아웃
-    path('login', LoginView.as_view(), name='rest_login'),
+    path('login', LoginAPI.as_view(), name='rest_login'),
     path('logout', LogoutView.as_view(), name='rest_logout'),
     # 비밀번호 수정
     path('password-change', PasswordChangeView.as_view(), name='rest_password_change'),
